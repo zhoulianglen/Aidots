@@ -1,68 +1,72 @@
 # aidots
 
-AI Coding 工具个性化配置管理 — 扫描、备份、恢复、对比你的 AI 编码工具配置。
+[🇨🇳 中文](README.zh-CN.md)
 
-## 功能
+Manage personalized configurations across all your AI coding tools — scan, backup, restore, and diff.
 
-- **扫描** — 自动检测本机已安装的 AI 编码工具及其个性化配置
-- **备份** — 将配置文件备份到 Git 仓库，自动生成 README，提交并推送
-- **恢复** — 从备份仓库恢复配置到本机（支持新机器迁移）
-- **对比** — 查看本地配置与备份之间的差异
+## Features
 
-## 支持的工具
+- **Scan** — Auto-detect installed AI coding tools and their personalized configs
+- **Backup** — Back up config files to a Git repo with auto-generated README, commit and push
+- **Restore** — Restore configs from backup to local machine (supports new machine migration)
+- **Diff** — View differences between local configs and backup
 
-| 工具 | 配置路径 | 备份内容 |
-|------|----------|----------|
-| Claude Code | `~/.claude/` | CLAUDE.md、settings.json、skills/、plugins/ |
+## Supported Tools
+
+| Tool | Config Path | Backed Up Content |
+|------|------------|-------------------|
+| Claude Code | `~/.claude/` | CLAUDE.md, settings.json, skills/, plugins/ |
 | Claude-Mem | `~/.claude-mem/` | settings.json |
-| Codex CLI | `~/.codex/` | config.toml、skills/ |
-| Cursor | `~/.cursor/` | extensions.json、skills-cursor/ |
-| Gemini CLI | `~/.gemini/` | GEMINI.md、settings.json |
-| Antigravity | `~/.antigravity/` | argv.json、extensions/ |
-| GitHub Copilot | `~/.copilot/` | 配置文件 |
-| Windsurf | `~/.windsurf/` | 配置文件 |
-| Aider | `~/.aider/` | 配置文件 |
+| Codex CLI | `~/.codex/` | config.toml, skills/ |
+| Cursor | `~/.cursor/` | extensions.json, skills-cursor/ |
+| Gemini CLI | `~/.gemini/` | GEMINI.md, settings.json |
+| Antigravity | `~/.antigravity/` | argv.json, extensions/ |
+| GitHub Copilot | `~/.copilot/` | Config files |
+| Windsurf | `~/.windsurf/` | Config files |
+| Aider | `~/.aider/` | Config files |
 
-未安装的工具自动跳过。敏感文件（凭据、token）、空文件和系统默认内容不会被备份。
+Tools not installed are automatically skipped. Sensitive files (credentials, tokens), empty files, and system defaults are never backed up.
 
-## 安装
+## Install
 
-作为 Claude Code Skill 安装：
+As a Claude Code Skill:
 
 ```
 /skill install zhoulianglen/aidots
 ```
 
-## 使用
+## Usage
 
 ```
-/aidots              # 扫描本机 AI 工具配置
-/aidots scan         # 同上
-/aidots backup       # 备份配置到 Git 仓库
-/aidots diff         # 对比本地与备份的差异
-/aidots restore      # 从备份恢复配置
+/aidots              # Scan local AI tool configs
+/aidots scan         # Same as above
+/aidots backup       # Back up configs to Git repo
+/aidots diff         # Compare local vs backup
+/aidots restore      # Restore configs from backup
 ```
 
-首次执行 `/aidots backup` 时会提示设置备份目录（默认 `~/dotai`），配置保存在 `~/.aidots/config.json`。
+On first `/aidots backup`, you'll be prompted to set a backup directory (default `~/dotai`). The setting is saved to `~/.aidots/config.json`.
 
-## 添加新工具
+Output language follows your system locale — English by default, Chinese for `zh_*` locales.
 
-编辑 `aidots/scripts/tools.conf`，每行格式：
+## Adding New Tools
+
+Edit `aidots/scripts/tools.conf`, one line per tool:
 
 ```
-工具ID|显示名称|配置目录|包含规则|排除规则
+tool_id|Display Name|config_dir|include_globs|exclude_globs
 ```
 
-示例：
+Example:
 ```
 mytool|My Tool|~/.mytool|config.json,settings/**|cache/**,logs/**
 ```
 
-## 依赖
+## Dependencies
 
-- `jq` — JSON 处理（`brew install jq`）
-- `git` — 版本控制
-- Bash 3.2+（macOS 默认）
+- `jq` — JSON processing (`brew install jq`)
+- `git` — Version control
+- Bash 3.2+ (macOS default)
 
 ## License
 

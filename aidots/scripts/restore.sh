@@ -24,6 +24,64 @@ else
     C_GREEN='' C_YELLOW='' C_RED='' C_DIM='' C_BOLD='' C_CYAN='' C_RESET=''
 fi
 
+# ── Locale ───────────────────────────────────
+detect_locale() {
+    local lang="${LANG:-${LC_ALL:-${LANGUAGE:-en}}}"
+    case "$lang" in
+        zh*) printf 'zh' ;;
+        *)   printf 'en' ;;
+    esac
+}
+
+LOCALE=$(detect_locale)
+
+# ── Messages ─────────────────────────────────
+if [[ "$LOCALE" == "zh" ]]; then
+    MSG_SKIP_UNSAFE_DIR="⚠️  跳过 %s — 配置目录不安全：%s"
+    MSG_FILE_COUNT="%d 个文件"
+    MSG_ALL_IDENTICAL_SKIP="⏭️  全部一致，跳过"
+    MSG_STATUS_NEW="🆕 新文件"
+    MSG_STATUS_OVERWRITE="📝 覆盖"
+    MSG_STATUS_SKIP="⏭️  跳过"
+    MSG_SAME_CONTENT="（内容相同）"
+    MSG_CONFIRM_RESTORE="恢复 %s 的 %d 个文件？(y/n/all) "
+    MSG_SKIPPED="⏭️  已跳过"
+    MSG_RESTORED="✅ 已恢复 %d 个文件"
+    MSG_BACKUP_DIR_NOT_FOUND="未找到备份目录。请使用 --dir <path> 指定，或在 %s 中配置 backup_dir。"
+    MSG_BACKUP_DIR_MISSING="备份目录不存在：%s"
+    MSG_BACKUP_DIR_UNSAFE="备份目录不安全：%s"
+    MSG_HEADER_PREVIEW="🔄 aidots 配置恢复（预览模式）"
+    MSG_HEADER="🔄 aidots 配置恢复"
+    MSG_BACKUP_DIR_LABEL="备份目录："
+    MSG_TOOL_NOT_IN_CONF="工具 '%s' 未在 tools.conf 中定义"
+    MSG_UNKNOWN_BACKUP="⚠️  发现未知工具备份：%s（不在 tools.conf 中，已跳过）"
+    MSG_NO_TOOLS_FOUND="未在备份目录中找到任何工具配置"
+    MSG_SUMMARY_PREVIEW="[预览] 将恢复 %d 个文件，跳过 %d 个"
+    MSG_SUMMARY="恢复完成：恢复 %d 个文件，跳过 %d 个"
+else
+    MSG_SKIP_UNSAFE_DIR="⚠️  Skipping %s — unsafe config dir: %s"
+    MSG_FILE_COUNT="%d files"
+    MSG_ALL_IDENTICAL_SKIP="⏭️  All identical, skipping"
+    MSG_STATUS_NEW="🆕 New file"
+    MSG_STATUS_OVERWRITE="📝 Overwrite"
+    MSG_STATUS_SKIP="⏭️  Skip"
+    MSG_SAME_CONTENT=" (identical)"
+    MSG_CONFIRM_RESTORE="Restore %s — %d files? (y/n/all) "
+    MSG_SKIPPED="⏭️  Skipped"
+    MSG_RESTORED="✅ Restored %d files"
+    MSG_BACKUP_DIR_NOT_FOUND="Backup directory not found. Use --dir <path> or set backup_dir in %s."
+    MSG_BACKUP_DIR_MISSING="Backup directory does not exist: %s"
+    MSG_BACKUP_DIR_UNSAFE="Unsafe backup directory: %s"
+    MSG_HEADER_PREVIEW="🔄 aidots Config Restore (preview)"
+    MSG_HEADER="🔄 aidots Config Restore"
+    MSG_BACKUP_DIR_LABEL="Backup dir: "
+    MSG_TOOL_NOT_IN_CONF="Tool '%s' is not defined in tools.conf"
+    MSG_UNKNOWN_BACKUP="⚠️  Unknown tool backup found: %s (not in tools.conf, skipped)"
+    MSG_NO_TOOLS_FOUND="No tool configs found in backup directory"
+    MSG_SUMMARY_PREVIEW="[Preview] Would restore %d files, skip %d"
+    MSG_SUMMARY="Restore complete: %d files restored, %d skipped"
+fi
+
 # ── Globals ─────────────────────────────────
 BACKUP_DIR=""
 DRY_RUN=false
@@ -134,7 +192,7 @@ restore_tool() {
 
     # Safety: verify config_dir looks reasonable
     if ! is_safe_config_dir "$config_dir"; then
-        printf '%b⚠️  跳过 %s — 配置目录不安全：%s%b\n\n' "$C_YELLOW" "$display_name" "$config_dir" "$C_RESET"
+        printf "%b${MSG_SKIP_UNSAFE_DIR}%b\n\n" "$C_YELLOW" "$display_name" "$config_dir" "$C_RESET"
         return 0
     fi
 
@@ -184,29 +242,29 @@ restore_tool() {
     # Display header
     local actionable_count=$((new_count + overwrite_count))
 
-    printf '%b%s (%s/)%b — %d 个文件\n' \
+    printf "%b%s (%s/)%b — ${MSG_FILE_COUNT}\n" \
         "$C_BOLD" "$display_name" "$config_dir" "$C_RESET" "$file_count"
 
     # If everything is identical, show short message
     if (( actionable_count == 0 )); then
-        printf '  ⏭️  全部一致，跳过\n\n'
+        printf '  %s\n\n' "$MSG_ALL_IDENTICAL_SKIP"
         TOTAL_SKIPPED=$((TOTAL_SKIPPED + skip_count))
         return 0
     fi
 
     # Show new files
     for f in "${new_files[@]}"; do
-        printf '  %b🆕 新文件%b  %s\n' "$C_GREEN" "$C_RESET" "$f"
+        printf '  %b%s%b  %s\n' "$C_GREEN" "$MSG_STATUS_NEW" "$C_RESET" "$f"
     done
 
     # Show overwrite files
     for f in "${overwrite_files[@]}"; do
-        printf '  %b📝 覆盖%b    %s\n' "$C_YELLOW" "$C_RESET" "$f"
+        printf '  %b%s%b    %s\n' "$C_YELLOW" "$MSG_STATUS_OVERWRITE" "$C_RESET" "$f"
     done
 
     # Show skip files
     for f in "${skip_files[@]}"; do
-        printf '  %b⏭️  跳过%b    %s%b（内容相同）%b\n' "$C_DIM" "$C_RESET" "$f" "$C_DIM" "$C_RESET"
+        printf '  %b%s%b    %s%b%s%b\n' "$C_DIM" "$MSG_STATUS_SKIP" "$C_RESET" "$f" "$C_DIM" "$MSG_SAME_CONTENT" "$C_RESET"
     done
 
     # In dry-run mode, just tally up
@@ -220,13 +278,13 @@ restore_tool() {
     # Ask for confirmation unless --force or user previously chose "all"
     if ! $FORCE && ! $RESTORE_ALL; then
         local answer=""
-        printf '恢复 %s 的 %d 个文件？(y/n/all) ' "$display_name" "$actionable_count"
+        printf "$MSG_CONFIRM_RESTORE" "$display_name" "$actionable_count"
         read -r answer </dev/tty
         case "$answer" in
             y|Y) ;;
             all|ALL|a|A) RESTORE_ALL=true ;;
             *)
-                printf '  ⏭️  已跳过\n\n'
+                printf '  %s\n\n' "$MSG_SKIPPED"
                 TOTAL_SKIPPED=$((TOTAL_SKIPPED + file_count))
                 return 0
                 ;;
@@ -250,7 +308,7 @@ restore_tool() {
         restored=$((restored + 1))
     done
 
-    printf '  %b✅ 已恢复 %d 个文件%b\n\n' "$C_GREEN" "$restored" "$C_RESET"
+    printf "  %b${MSG_RESTORED}%b\n\n" "$C_GREEN" "$restored" "$C_RESET"
 
     TOTAL_RESTORED=$((TOTAL_RESTORED + restored))
     TOTAL_SKIPPED=$((TOTAL_SKIPPED + skip_count))
@@ -297,7 +355,7 @@ main() {
     # Determine backup directory
     if [[ -z "$BACKUP_DIR" ]]; then
         if ! BACKUP_DIR=$(read_config_backup_dir); then
-            die "未找到备份目录。请使用 --dir <path> 指定，或在 ${CONFIG_FILE} 中配置 backup_dir。"
+            die "$(printf "$MSG_BACKUP_DIR_NOT_FOUND" "$CONFIG_FILE")"
         fi
     fi
 
@@ -306,23 +364,23 @@ main() {
 
     # Verify backup directory exists
     if [[ ! -d "$BACKUP_DIR" ]]; then
-        die "备份目录不存在：${BACKUP_DIR}"
+        die "$(printf "$MSG_BACKUP_DIR_MISSING" "$BACKUP_DIR")"
     fi
 
     # Safety: never restore to / or $HOME directly
     if [[ "$BACKUP_DIR" == "/" || "$BACKUP_DIR" == "$HOME" ]]; then
-        die "备份目录不安全：${BACKUP_DIR}"
+        die "$(printf "$MSG_BACKUP_DIR_UNSAFE" "$BACKUP_DIR")"
     fi
 
     # Header
     local display_backup
     display_backup=$(collapse_home "$BACKUP_DIR")
     if $DRY_RUN; then
-        printf '\n%b🔄 aidots 配置恢复（预览模式）%b\n\n' "$C_BOLD" "$C_RESET"
+        printf '\n%b%s%b\n\n' "$C_BOLD" "$MSG_HEADER_PREVIEW" "$C_RESET"
     else
-        printf '\n%b🔄 aidots 配置恢复%b\n\n' "$C_BOLD" "$C_RESET"
+        printf '\n%b%s%b\n\n' "$C_BOLD" "$MSG_HEADER" "$C_RESET"
     fi
-    printf '备份目录：%s\n\n' "$display_backup"
+    printf '%s%s\n\n' "$MSG_BACKUP_DIR_LABEL" "$display_backup"
 
     # Scan backup directory for .tool_id/ directories
     local found_any_tool=false
@@ -338,7 +396,7 @@ main() {
             fi
         done < "$TOOLS_CONF"
         if ! $tool_found; then
-            die "工具 '${TOOL_FILTER}' 未在 tools.conf 中定义"
+            die "$(printf "$MSG_TOOL_NOT_IN_CONF" "$TOOL_FILTER")"
         fi
     fi
 
@@ -380,23 +438,23 @@ main() {
         done < "$TOOLS_CONF"
 
         if ! $known; then
-            printf '%b⚠️  发现未知工具备份：%s（不在 tools.conf 中，已跳过）%b\n\n' \
+            printf "%b${MSG_UNKNOWN_BACKUP}%b\n\n" \
                 "$C_YELLOW" "$dirname" "$C_RESET"
         fi
     done < <(find "$BACKUP_DIR" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort)
 
     if ! $found_any_tool; then
-        printf '%b未在备份目录中找到任何工具配置%b\n\n' "$C_YELLOW" "$C_RESET"
+        printf '%b%s%b\n\n' "$C_YELLOW" "$MSG_NO_TOOLS_FOUND" "$C_RESET"
         exit 0
     fi
 
     # Summary
     printf '────────────────────\n'
     if $DRY_RUN; then
-        printf '[预览] 将恢复 %d 个文件，跳过 %d 个\n\n' \
+        printf "${MSG_SUMMARY_PREVIEW}\n\n" \
             "$TOTAL_RESTORED" "$TOTAL_SKIPPED"
     else
-        printf '恢复完成：恢复 %d 个文件，跳过 %d 个\n\n' \
+        printf "${MSG_SUMMARY}\n\n" \
             "$TOTAL_RESTORED" "$TOTAL_SKIPPED"
     fi
 }

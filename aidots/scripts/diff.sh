@@ -21,6 +21,54 @@ else
     C_GREEN='' C_YELLOW='' C_RED='' C_DIM='' C_BOLD='' C_RESET=''
 fi
 
+# ── Locale ───────────────────────────────────
+detect_locale() {
+    local lang="${LANG:-${LC_ALL:-${LANGUAGE:-en}}}"
+    case "$lang" in
+        zh*) printf 'zh' ;;
+        *)   printf 'en' ;;
+    esac
+}
+
+LOCALE=$(detect_locale)
+
+# ── Messages ─────────────────────────────────
+if [[ "$LOCALE" == "zh" ]]; then
+    MSG_ERROR="错误："
+    MSG_DIR_REQUIRES_PATH="--dir 需要指定路径参数"
+    MSG_UNKNOWN_OPTION="未知参数："
+    MSG_CONFIG_NOT_FOUND="未找到配置文件 %s，请先执行 /aidots backup 或使用 --dir 指定备份目录"
+    MSG_JQ_REQUIRED_CONFIG="需要 jq 来解析配置文件，请先安装：brew install jq"
+    MSG_BACKUP_DIR_NOT_IN_CONFIG="配置文件中未找到 backup_dir，请先执行 /aidots backup"
+    MSG_STATUS_ADDED="🟢 新增"
+    MSG_STATUS_MODIFIED="🟡 修改"
+    MSG_STATUS_UNCHANGED="⚪ 未变"
+    MSG_STATUS_DELETED="🔴 已删除"
+    MSG_ALL_IDENTICAL="⚪ 全部一致"
+    MSG_BACKUP_DIR_MISSING="备份目录不存在，请先执行 /aidots backup"
+    MSG_JQ_REQUIRED_SCAN="需要 jq 来解析扫描结果，请先安装：brew install jq"
+    MSG_HEADER="🔍 配置差异对比"
+    MSG_BACKUP_DIR_LABEL="备份目录："
+    MSG_SUMMARY="汇总：%d 个新增，%d 个修改，%d 个删除，%d 个未变"
+else
+    MSG_ERROR="Error: "
+    MSG_DIR_REQUIRES_PATH="--dir requires a path argument"
+    MSG_UNKNOWN_OPTION="Unknown option: "
+    MSG_CONFIG_NOT_FOUND="Config file not found: %s. Run /aidots backup first or use --dir to specify a backup directory"
+    MSG_JQ_REQUIRED_CONFIG="jq is required to parse the config file. Install it with: brew install jq"
+    MSG_BACKUP_DIR_NOT_IN_CONFIG="backup_dir not found in config file. Run /aidots backup first"
+    MSG_STATUS_ADDED="🟢 Added"
+    MSG_STATUS_MODIFIED="🟡 Modified"
+    MSG_STATUS_UNCHANGED="⚪ Unchanged"
+    MSG_STATUS_DELETED="🔴 Deleted"
+    MSG_ALL_IDENTICAL="⚪ All identical"
+    MSG_BACKUP_DIR_MISSING="Backup directory does not exist. Run /aidots backup first"
+    MSG_JQ_REQUIRED_SCAN="jq is required to parse scan results. Install it with: brew install jq"
+    MSG_HEADER="🔍 Config Diff"
+    MSG_BACKUP_DIR_LABEL="Backup dir: "
+    MSG_SUMMARY="Summary: %d added, %d modified, %d deleted, %d unchanged"
+fi
+
 # ── Globals ─────────────────────────────────
 BACKUP_DIR=""
 SHOW_ALL=false
@@ -42,7 +90,7 @@ usage() {
 }
 
 die() {
-    printf '%b错误：%s%b\n' "$C_RED" "$1" "$C_RESET" >&2
+    printf '%b%s%s%b\n' "$C_RED" "$MSG_ERROR" "$1" "$C_RESET" >&2
     exit 1
 }
 
@@ -62,7 +110,7 @@ parse_args() {
     while (( $# > 0 )); do
         case "$1" in
             --dir)
-                [[ $# -lt 2 ]] && die "--dir 需要指定路径参数"
+                [[ $# -lt 2 ]] && die "$MSG_DIR_REQUIRES_PATH"
                 BACKUP_DIR="$2"
                 shift 2
                 ;;
@@ -74,7 +122,7 @@ parse_args() {
                 usage
                 ;;
             *)
-                die "未知参数：$1"
+                die "${MSG_UNKNOWN_OPTION}$1"
                 ;;
         esac
     done
@@ -94,17 +142,17 @@ resolve_backup_dir() {
 
     # Read from config
     if [[ ! -f "$CONFIG_FILE" ]]; then
-        die "未找到配置文件 ${CONFIG_FILE}，请先执行 /aidots backup 或使用 --dir 指定备份目录"
+        die "$(printf "$MSG_CONFIG_NOT_FOUND" "$CONFIG_FILE")"
     fi
 
     if ! command -v jq &>/dev/null; then
-        die "需要 jq 来解析配置文件，请先安装：brew install jq"
+        die "$MSG_JQ_REQUIRED_CONFIG"
     fi
 
     BACKUP_DIR=$(jq -r '.backup_dir // empty' "$CONFIG_FILE" 2>/dev/null)
 
     if [[ -z "$BACKUP_DIR" ]]; then
-        die "配置文件中未找到 backup_dir，请先执行 /aidots backup"
+        die "$MSG_BACKUP_DIR_NOT_IN_CONFIG"
     fi
 
     # Expand ~
@@ -150,17 +198,17 @@ compare_tool() {
 
         if [[ ! -d "$tool_backup_dir" ]] || [[ ! -f "$backup_file" ]]; then
             # File exists locally but not in backup
-            lines+=("$(printf '  %b🟢 新增  %s%b' "$C_GREEN" "$relpath" "$C_RESET")")
+            lines+=("$(printf '  %b%s  %s%b' "$C_GREEN" "$MSG_STATUS_ADDED" "$relpath" "$C_RESET")")
             added=$((added + 1))
         elif ! cmp -s "$local_file" "$backup_file"; then
             # Both exist but differ
-            lines+=("$(printf '  %b🟡 修改  %s%b' "$C_YELLOW" "$relpath" "$C_RESET")")
+            lines+=("$(printf '  %b%s  %s%b' "$C_YELLOW" "$MSG_STATUS_MODIFIED" "$relpath" "$C_RESET")")
             modified=$((modified + 1))
         else
             # Identical
             unchanged=$((unchanged + 1))
             if $SHOW_ALL; then
-                lines+=("$(printf '  %b⚪ 未变  %s%b' "$C_DIM" "$relpath" "$C_RESET")")
+                lines+=("$(printf '  %b%s  %s%b' "$C_DIM" "$MSG_STATUS_UNCHANGED" "$relpath" "$C_RESET")")
             fi
         fi
     done
@@ -185,7 +233,7 @@ compare_tool() {
 
             if ! $found; then
                 # File in backup but not found locally
-                lines+=("$(printf '  %b🔴 已删除  %s%b' "$C_RED" "$relpath" "$C_RESET")")
+                lines+=("$(printf '  %b%s  %s%b' "$C_RED" "$MSG_STATUS_DELETED" "$relpath" "$C_RESET")")
                 deleted=$((deleted + 1))
             fi
         done < <(find "$tool_backup_dir" -type f 2>/dev/null | sort)
@@ -196,7 +244,7 @@ compare_tool() {
     printf '%b%s%b (%s)\n' "$C_BOLD" "$display_name" "$C_RESET" "${tool_id}/"
 
     if (( ${#lines[@]} == 0 )); then
-        printf '  %b⚪ 全部一致%b\n' "$C_DIM" "$C_RESET"
+        printf '  %b%s%b\n' "$C_DIM" "$MSG_ALL_IDENTICAL" "$C_RESET"
     else
         local line
         for line in "${lines[@]}"; do
@@ -221,12 +269,12 @@ main() {
 
     # Validate backup directory exists
     if [[ ! -d "$BACKUP_DIR" ]]; then
-        die "备份目录不存在，请先执行 /aidots backup"
+        die "$MSG_BACKUP_DIR_MISSING"
     fi
 
     # Verify jq is available
     if ! command -v jq &>/dev/null; then
-        die "需要 jq 来解析扫描结果，请先安装：brew install jq"
+        die "$MSG_JQ_REQUIRED_SCAN"
     fi
 
     # Run scan.sh --json to get current local state
@@ -234,8 +282,8 @@ main() {
     scan_json=$("${SCRIPT_DIR}/scan.sh" --json)
 
     # Header
-    printf '\n%b🔍 配置差异对比%b\n\n' "$C_BOLD" "$C_RESET"
-    printf '备份目录：%s\n\n' "$(display_path "$BACKUP_DIR")"
+    printf '\n%b%s%b\n\n' "$C_BOLD" "$MSG_HEADER" "$C_RESET"
+    printf '%s%s\n\n' "$MSG_BACKUP_DIR_LABEL" "$(display_path "$BACKUP_DIR")"
 
     # Iterate over each tool
     local tool_count
@@ -302,7 +350,7 @@ main() {
                 while IFS= read -r bf; do
                     [[ -z "$bf" ]] && continue
                     local rp="${bf#${backup_tool_dir}}"
-                    printf '  %b🔴 已删除  %s%b\n' "$C_RED" "$rp" "$C_RESET"
+                    printf '  %b%s  %s%b\n' "$C_RED" "$MSG_STATUS_DELETED" "$rp" "$C_RESET"
                     TOTAL_DELETED=$((TOTAL_DELETED + 1))
                 done < <(find "$backup_tool_dir" -type f 2>/dev/null | sort)
 
@@ -313,7 +361,7 @@ main() {
 
     # Summary
     printf '────────────────────\n'
-    printf '汇总：%d 个新增，%d 个修改，%d 个删除，%d 个未变\n\n' \
+    printf "${MSG_SUMMARY}\n\n" \
         "$TOTAL_ADDED" "$TOTAL_MODIFIED" "$TOTAL_DELETED" "$TOTAL_UNCHANGED"
 }
 

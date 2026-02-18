@@ -21,6 +21,31 @@ else
     C_GREEN='' C_YELLOW='' C_RED='' C_DIM='' C_BOLD='' C_RESET=''
 fi
 
+# ── Locale ───────────────────────────────────
+detect_locale() {
+    local lang="${LANG:-${LC_ALL:-${LANGUAGE:-en}}}"
+    case "$lang" in
+        zh*) printf 'zh' ;;
+        *)   printf 'en' ;;
+    esac
+}
+
+LOCALE=$(detect_locale)
+
+if [[ "$LOCALE" == "zh" ]]; then
+    MSG_SCAN_HEADER="🔍 AI Coding 工具配置扫描"
+    MSG_FILE_COUNT="共 %d 个文件"
+    MSG_NOT_INSTALLED="未安装"
+    MSG_NO_CUSTOM_CONFIG="未发现个性化配置"
+    MSG_SCAN_SUMMARY="扫描完成：发现 %d 个工具，共 %d 个配置文件"
+else
+    MSG_SCAN_HEADER="🔍 AI Coding Tool Config Scan"
+    MSG_FILE_COUNT="%d files"
+    MSG_NOT_INSTALLED="not installed"
+    MSG_NO_CUSTOM_CONFIG="no custom config found"
+    MSG_SCAN_SUMMARY="Scan complete: found %d tools, %d config files"
+fi
+
 # ── Globals ─────────────────────────────────
 OUTPUT_MODE="human"
 
@@ -368,7 +393,7 @@ output_human() {
     local tools_found=0
     local total_files=0
 
-    printf '\n%b🔍 AI Coding 工具配置扫描%b\n\n' "$C_BOLD" "$C_RESET"
+    printf '\n%b%s%b\n\n' "$C_BOLD" "$MSG_SCAN_HEADER" "$C_RESET"
 
     while IFS='|' read -r tool_id display_name config_dir include_globs exclude_globs; do
         # Skip comments and blank lines
@@ -393,19 +418,19 @@ output_human() {
                 printf '   %-50s %s\n' "$fpath" "$hsize"
             done < "$SCAN_RESULT_FILE"
 
-            printf '   %b共 %d 个文件%b\n\n' "$C_DIM" "$file_count" "$C_RESET"
+            printf "   %b${MSG_FILE_COUNT}%b\n\n" "$C_DIM" "$file_count" "$C_RESET"
 
         elif [[ "$SCAN_STATUS" == "not_installed" ]]; then
-            printf '%b❌ %s (%s) — 未安装%b\n\n' "$C_RED" "$display_name" "$display_dir" "$C_RESET"
+            printf '%b❌ %s (%s) — %s%b\n\n' "$C_RED" "$display_name" "$display_dir" "$MSG_NOT_INSTALLED" "$C_RESET"
 
         else
-            printf '%b⏭️  %s (%s) — 未发现个性化配置%b\n\n' "$C_YELLOW" "$display_name" "$display_dir" "$C_RESET"
+            printf '%b⏭️  %s (%s) — %s%b\n\n' "$C_YELLOW" "$display_name" "$display_dir" "$MSG_NO_CUSTOM_CONFIG" "$C_RESET"
         fi
 
     done < "$TOOLS_CONF"
 
     printf '────────────────────\n'
-    printf '扫描完成：发现 %d 个工具，共 %d 个配置文件\n\n' "$tools_found" "$total_files"
+    printf "${MSG_SCAN_SUMMARY}\n\n" "$tools_found" "$total_files"
 }
 
 # ── Main ────────────────────────────────────
