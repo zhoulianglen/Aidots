@@ -69,7 +69,7 @@ $ /aidots scan
 ## 安装
 
 ```bash
-/plugins marketplace add zhoulianglen/aidots
+/plugins marketplace add zhoulianglen/Aidots
 /plugins install aidots
 ```
 

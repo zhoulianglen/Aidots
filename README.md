@@ -69,7 +69,7 @@ Tools not installed are automatically skipped. Adding a new tool takes one line 
 ## Install
 
 ```bash
-/plugins marketplace add zhoulianglen/aidots
+/plugins marketplace add zhoulianglen/Aidots
 /plugins install aidots
 ```
 
