@@ -1,6 +1,5 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "aidots",
+  "name": "zhoulianglen-aidots",
   "owner": {
     "name": "zhoulianglen"
   },
@@ -12,8 +11,7 @@
     {
       "name": "aidots",
       "source": "./aidots",
-      "description": "Scan, backup, restore and diff all your AI coding tool configurations",
-      "version": "1.0.0"
+      "description": "Scan, backup, restore and diff all your AI coding tool configurations"
     }
   ]
 }
